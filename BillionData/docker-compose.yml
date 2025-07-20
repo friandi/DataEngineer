@@ -1,0 +1,109 @@
+services:
+
+  kafka-controller-1:
+    image: apache/kafka:3.8.1
+    container_name: kafka-controller-1
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLE: broker
+      KAFKA_LISTENERS: controller://:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: controller
+      KAFKA_GROUP_intial_REBALANCE_DELAY_MS: 0
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-controller-1:9093,2@kafka-controller-2:9093,3@kafka-controller-3:9093
+    depends_on:
+      - kafka-controller-1
+      - kafka-controller-2
+      - kafka-controller-3
+    networks:
+      - Dat1
+    volumes:
+      - kafka-controller-1-data:/var/lib/kafka/data
+
+  kafka-controller-2:
+    image: apache/kafka:3.8.1 
+    container_name: kafka-controller-2
+    environment:
+      KAFKA_NODE_ID: 2
+      KAFKA_PROCESS_ROLE: broker
+      KAFKA_LISTENERS: controller://:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: controller
+      KAFKA_GROUP_intial_REBALANCE_DELAY_MS: 0
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-controller-1:9093,2@kafka-controller-2:9093,3@kafka-controller-3:9093
+    depends_on:
+      - kafka-controller-1
+      - kafka-controller-2
+      - kafka-controller-3
+    networks:
+      - Dat1  
+    volumes:
+      - kafka-controller-2-data:/var/lib/kafka/data
+
+  kafka-controller-3:
+    image: apache/kafka:3.8.1   
+    container_name: kafka-controller-3
+    environment:
+      KAFKA_NODE_ID: 3
+      KAFKA_PROCESS_ROLE: broker
+      KAFKA_LISTENERS: controller://:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: controller
+      KAFKA_GROUP_intial_REBALANCE_DELAY_MS: 0
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-controller-1:9093,2@kafka-controller-2:9093,3@kafka-controller-3:9093
+
+    depends_on:
+      - kafka-controller-1
+      - kafka-controller-2
+      - kafka-controller-3
+    networks:
+      - Dat1  
+    volumes:
+      - kafka-controller-3-data:/var/lib/kafka/data
+
+schemas-registry:
+    image: confluentinc/cp-schema-registry:7.5.1
+    container_name: schemas-registry
+    ports:
+      - "18081:18081"
+    environment:
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka-controller-1:9093 #,kafka-controller-2:9093,kafka-controller-3:9093#
+      SCHEMA_REGISTRY_HOST_NAME: schemas-registry
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0:18081
+      SCHEMA_REGISTRY_KAFKASTORE_TOPIC: _schemas
+    depends_on:
+      - kafka-controller-1
+      - kafka-controller-2
+      - kafka-controller-3
+    networks:
+      - Dat1
+
+console:
+    image: docker.redpand.io/redpandadata/console:v2.5.2
+    entirypoint: /bin/sh
+    command: -|
+      -c 'echo "$$CONSOLE_CONFIG_FILE" > /tmp/console-config.yaml; /app/console'
+    ports:
+      - "8080:8080"
+    depends_on:
+      - schemas-registry
+    environment:
+      CONSOLE_FILEPATH: /tmp/config.yaml
+      CONSOLE_CONFIG_FILE: >
+        kafka:
+          brokers: ["kafka-broker-1:9092", "kafka-broker-2:9092", "kafka-broker-3:9092"]
+        schemaRegistry:
+          enabeld: true
+          url: http://schemas-registry:18081
+        
+        redpand:
+          adminAPI:
+            enable: false
+            urls: ["http://kafka_broker:9644"]
+          connect:
+            enable: false
+            cluster:
+            - name: local-connect-cluster
+              url: http://connect:8083
+    networks:
+      - Dat1
