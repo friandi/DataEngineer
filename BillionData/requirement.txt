@@ -1,0 +1,1 @@
+pip install confluent-kafka OR python.exe -m pip install confluent-kafka
