@@ -1,1 +1,5 @@
 pip install confluent-kafka OR python.exe -m pip install confluent-kafka
+pip install pyspark OR python.exe -m pip install pyspark
+
+# buat jalankan sparknya 
+docker exec -it billiondata-spark-master-1 spark-submit --master spark://spark-master:7077 --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0 /opt/bitnami/spark/jobs/spark_processor.py
